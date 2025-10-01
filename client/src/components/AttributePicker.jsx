@@ -78,11 +78,11 @@ export default function AttributePicker({ kpiId, allAttributes = null, onSelect,
       setCount("");
       // notify parent so it can refresh UI (KpiEdit expects onAdded to be called)
       if (typeof onAdded === "function") onAdded(created);
-      // locally update options
+      // locally update options with the actual response from backend
       setOptions(prev => {
         const exists = prev.find(o => String(o.name).toLowerCase() === trimmed.toLowerCase());
         if (exists) return prev;
-        const next = [...prev, { id: created?.id ?? trimmed, name: created?.name ?? trimmed, count: created?.count }];
+        const next = [...prev, { id: created.id, name: created.name, count: created.count }];
         next.sort((a,b)=>a.name.localeCompare(b.name));
         return next;
       });
@@ -99,16 +99,16 @@ export default function AttributePicker({ kpiId, allAttributes = null, onSelect,
     <div>
       <div className="flex gap-2 items-center">
         <div className="flex-1">
-          <label className="text-xs text-slate-500 block mb-1">Attach existing attribute</label>
+          <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Attach existing attribute</label>
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
             disabled={loading}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
           >
-            <option value="">(choose existing)</option>
+            <option value="" className="dark:bg-gray-700 dark:text-white">(choose existing)</option>
             {options.map(opt => (
-              <option key={opt.id} value={opt.id}>{opt.name}{opt.count !== undefined ? ` (${opt.count})` : ""}</option>
+              <option key={opt.id} value={opt.id} className="dark:bg-gray-700 dark:text-white">{opt.name}{opt.count !== undefined ? ` (${opt.count})` : ""}</option>
             ))}
           </select>
         </div>
@@ -118,7 +118,7 @@ export default function AttributePicker({ kpiId, allAttributes = null, onSelect,
           <button
             onClick={handleAttachExisting}
             disabled={!selectedId}
-            className="px-3 py-2 bg-slate-100 rounded text-sm"
+            className="px-3 py-2 bg-slate-100 dark:bg-gray-700 rounded text-sm text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-gray-600"
           >
             Attach
           </button>
@@ -126,34 +126,34 @@ export default function AttributePicker({ kpiId, allAttributes = null, onSelect,
       </div>
 
       <div className="my-3 border-t pt-3">
-        <div className="text-xs text-slate-500 mb-2">Or add a new attribute and attach it to this KPI</div>
+        <div className="text-xs text-slate-500 dark:text-gray-400 mb-2">Or add a new attribute and attach it to this KPI</div>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={loading ? "Loading options..." : "New attribute name"}
-            className="flex-1 p-2 border rounded"
+            className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
             aria-label="New attribute name"
           />
           <input
             value={count}
             onChange={(e) => setCount(e.target.value)}
             placeholder="Count (opt)"
-            className="w-28 p-2 border rounded"
+            className="w-28 p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
             type="number"
             min="0"
           />
           <button
             onClick={handleAddAndAttach}
             disabled={saving || !kpiId}
-            className="px-3 py-2 bg-blue-600 text-white rounded"
+            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             {saving ? "Adding…" : "Add & Attach"}
           </button>
         </div>
       </div>
 
-      <div className="text-xs text-slate-500 mt-2">
+      <div className="text-xs text-slate-500 dark:text-gray-400 mt-2">
         Tip: pick an existing attribute to reuse it across KPIs, or add a new one. {error ? `Error: ${error}` : ""}
       </div>
     </div>

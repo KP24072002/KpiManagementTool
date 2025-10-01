@@ -492,6 +492,7 @@ import {
   CartesianGrid,
   ReferenceLine,
   ReferenceArea,
+  ComposedChart,
 } from "recharts";
 
 /* ---------- Helpers ---------- */
@@ -898,37 +899,37 @@ export default function ChartBuilderModal({ open, onClose, kpiId, headers = [], 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-6">
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
-      <div className="relative z-60 bg-white rounded shadow-lg w-[96%] max-w-[1200px] h-[88vh] overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Chart Builder</h3>
-          <button onClick={onClose} className="text-sm text-slate-600">Close</button>
+      <div className="relative z-60 bg-white dark:bg-gray-800 rounded shadow-lg w-[96%] max-w-[1200px] h-[88vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Chart Builder</h3>
+          <button onClick={onClose} className="text-sm text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white">Close</button>
         </div>
 
         <div className="p-4 overflow-auto" style={{ height: "calc(88vh - 120px)" }}>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-3">
             <div>
-              <label className="block text-sm text-slate-600">Chart Type</label>
-              <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="mt-1 block w-full p-2 border rounded">
-                <option value="line">Line</option>
-                <option value="bar">Bar</option>
+              <label className="block text-sm text-slate-600 dark:text-gray-400">Chart Type</label>
+              <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+                <option value="line" className="dark:bg-gray-700 dark:text-white">Line</option>
+                <option value="bar" className="dark:bg-gray-700 dark:text-white">Bar</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-600">X Axis (date by default)</label>
-              <select value={xHeader || ""} onChange={(e) => setXHeader(e.target.value)} className="mt-1 block w-full p-2 border rounded">
-                <option value="">(choose)</option>
-                {headers.map((h, i) => <option key={i} value={h}>{h}</option>)}
+              <label className="block text-sm text-slate-600 dark:text-gray-400">X Axis (date by default)</label>
+              <select value={xHeader || ""} onChange={(e) => setXHeader(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+                <option value="" className="dark:bg-gray-700 dark:text-white">(choose)</option>
+                {headers.map((h, i) => <option key={i} value={h} className="dark:bg-gray-700 dark:text-white">{h}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-600">Y Axis (KPI value by default)</label>
+              <label className="block text-sm text-slate-600 dark:text-gray-400">Y Axis (KPI value by default)</label>
               <select multiple value={yHeaders} onChange={(e) => {
                 const opts = Array.from(e.target.selectedOptions).map(o => o.value);
                 setYHeaders(opts);
-              }} className="mt-1 block w-full p-2 border rounded h-24">
-                {headers.map((h, i) => <option key={i} value={h}>{h}</option>)}
+              }} className="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded h-24 dark:bg-gray-700 dark:text-white">
+                {headers.map((h, i) => <option key={i} value={h} className="dark:bg-gray-700 dark:text-white">{h}</option>)}
               </select>
             </div>
 
@@ -957,12 +958,12 @@ export default function ChartBuilderModal({ open, onClose, kpiId, headers = [], 
           {xIsDateLike && (
             <div className="mb-3 flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-sm text-slate-600">From</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1 p-2 border rounded text-sm" />
+                <label className="block text-sm text-slate-600 dark:text-gray-400">From</label>
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded text-sm dark:bg-gray-700 dark:text-white" />
               </div>
               <div>
-                <label className="block text-sm text-slate-600">To</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1 p-2 border rounded text-sm" />
+                <label className="block text-sm text-slate-600 dark:text-gray-400">To</label>
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded text-sm dark:bg-gray-700 dark:text-white" />
               </div>
 
               <div className="ml-auto flex items-center gap-2">
@@ -977,13 +978,28 @@ export default function ChartBuilderModal({ open, onClose, kpiId, headers = [], 
           )}
 
           <div className="mb-3 flex items-center gap-2">
-            <input placeholder="Chart name" value={saveName} onChange={(e) => setSaveName(e.target.value)} className="p-2 border rounded flex-1" />
-            <button onClick={savePrimaryChart} disabled={saving || !xHeader || yHeaders.length === 0 || !saveName.trim()} className="px-3 py-2 bg-emerald-600 text-white rounded text-sm">
+            <input placeholder="Chart name" value={saveName} onChange={(e) => setSaveName(e.target.value)} className="p-2 border border-gray-300 dark:border-gray-600 rounded flex-1 dark:bg-gray-700 dark:text-white" />
+            <button onClick={savePrimaryChart} disabled={saving || !xHeader || yHeaders.length === 0 || !saveName.trim()} className="px-3 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700">
               {saving ? (primaryChartId ? "Updating..." : "Saving...") : (primaryChartId ? "Save changes" : "Save chart")}
             </button>
           </div>
 
           <div className="mb-3 border rounded" style={{ width: "100%", height: "calc(70vh - 160px)" }}>
+            {chartData.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                <div className="text-center">
+                  <div className="text-lg mb-2">No chart data available</div>
+                  <div className="text-sm">
+                    {headers.length === 0 ? 'No data uploaded for this KPI' : 
+                     (dateFrom || dateTo) ? 'No data in selected date range' :
+                     'Data may not contain valid numeric values'}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">
+                    Headers: {headers.length}, Rows: {rows.length}
+                  </div>
+                </div>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               {chartType === "line" ? (
                 <LineChart data={chartData} margin={{ top: 16, right: 24, left: 12, bottom: 36 }}>
@@ -1045,65 +1061,117 @@ export default function ChartBuilderModal({ open, onClose, kpiId, headers = [], 
                   ))}
                 </LineChart>
               ) : (
-                <BarChart data={chartData} margin={{ top: 16, right: 24, left: 12, bottom: 36 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="x" tickFormatter={(t) => (xIsDateLike ? t : String(t))} padding={{ left: 8, right: 8 }} />
-                  <YAxis domain={yDomain} />
-                  <Tooltip />
-                  <Legend />
+                // Use ComposedChart when overlayLineOnBar is enabled, otherwise use BarChart
+                overlayLineOnBar && yHeaders.length > 0 ? (
+                  <ComposedChart data={chartData} margin={{ top: 16, right: 24, left: 12, bottom: 36 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="x" tickFormatter={(t) => (xIsDateLike ? t : String(t))} padding={{ left: 8, right: 8 }} />
+                    <YAxis domain={yDomain} />
+                    <Tooltip />
+                    <Legend />
 
-                  {/* Background shading good zones */}
-                  {(targets && (targets.action === "increase" || targets.action === "maximize") && (targets.single != null || targets.upper != null)) && (
-                    <ReferenceArea
-                      y1={targets.single != null ? Number(targets.single) : Number(targets.upper)}
-                      y2={yDomain[1]}
-                      fill={GOOD_COLOR}
-                      opacity={0.06}
-                      isFront={false}
-                    />
-                  )}
-                  {(targets && (targets.action === "decrease" || targets.action === "minimize") && (targets.single != null || targets.lower != null)) && (
-                    <ReferenceArea
-                      y1={0}
-                      y2={targets.single != null ? Number(targets.single) : Number(targets.lower)}
-                      fill={GOOD_COLOR}
-                      opacity={0.06}
-                      isFront={false}
-                    />
-                  )}
-                  {(targets && targets.action === "maintain" && targets.lower != null && targets.upper != null) && (
-                    <ReferenceArea
-                      y1={Number(targets.lower)}
-                      y2={Number(targets.upper)}
-                      fill={GOOD_COLOR}
-                      opacity={0.06}
-                      isFront={false}
-                    />
-                  )}
+                    {/* Background shading good zones */}
+                    {(targets && (targets.action === "increase" || targets.action === "maximize") && (targets.single != null || targets.upper != null)) && (
+                      <ReferenceArea
+                        y1={targets.single != null ? Number(targets.single) : Number(targets.upper)}
+                        y2={yDomain[1]}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
+                    {(targets && (targets.action === "decrease" || targets.action === "minimize") && (targets.single != null || targets.lower != null)) && (
+                      <ReferenceArea
+                        y1={0}
+                        y2={targets.single != null ? Number(targets.single) : Number(targets.lower)}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
+                    {(targets && targets.action === "maintain" && targets.lower != null && targets.upper != null) && (
+                      <ReferenceArea
+                        y1={Number(targets.lower)}
+                        y2={Number(targets.upper)}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
 
-                  {showSingleTarget && <ReferenceLine y={Number(targets.single)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Target: ${Number(targets.single)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
-                  {showLower && <ReferenceLine y={Number(targets.lower)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Lower: ${Number(targets.lower)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
-                  {showUpper && <ReferenceLine y={Number(targets.upper)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Upper: ${Number(targets.upper)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+                    {showSingleTarget && <ReferenceLine y={Number(targets.single)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Target: ${Number(targets.single)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+                    {showLower && <ReferenceLine y={Number(targets.lower)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Lower: ${Number(targets.lower)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+                    {showUpper && <ReferenceLine y={Number(targets.upper)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Upper: ${Number(targets.upper)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
 
-                  {/* present value */}
-                  {showPresentLine && presentNum != null && (
-                    <ReferenceLine y={Number(presentNum)} stroke="#111827" strokeDasharray="4 4" label={{ value: `Present: ${presentNum}`, position: "insideBottomRight", fill: "#111827" }} />
-                  )}
+                    {/* present value */}
+                    {showPresentLine && presentNum != null && (
+                      <ReferenceLine y={Number(presentNum)} stroke="#111827" strokeDasharray="4 4" label={{ value: `Present: ${presentNum}`, position: "insideBottomRight", fill: "#111827" }} />
+                    )}
 
-                  {yHeaders.map((yh, idx) => <Bar key={yh} dataKey={yh} barSize={40 / Math.max(1, yHeaders.length)} fill={COLORS[idx % COLORS.length]} />)}
-                  {overlayLineOnBar && yHeaders.length > 0 && (
+                    {yHeaders.map((yh, idx) => <Bar key={`bar-${yh}-${idx}`} dataKey={yh} barSize={40 / Math.max(1, yHeaders.length)} fill={COLORS[idx % COLORS.length]} />)}
                     <Line
+                      key={`line-${yHeaders[0]}`}
                       type="monotone"
                       dataKey={yHeaders[0]}
                       stroke="#000000"
+                      strokeWidth={2}
                       dot={renderCustomizedDot(targets, act)}
                       activeDot={renderActiveDot(targets, act)}
                       connectNulls
                     />
-                  )}
-                </BarChart>
+                  </ComposedChart>
+                ) : (
+                  <BarChart data={chartData} margin={{ top: 16, right: 24, left: 12, bottom: 36 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="x" tickFormatter={(t) => (xIsDateLike ? t : String(t))} padding={{ left: 8, right: 8 }} />
+                    <YAxis domain={yDomain} />
+                    <Tooltip />
+                    <Legend />
+
+                    {/* Background shading good zones */}
+                    {(targets && (targets.action === "increase" || targets.action === "maximize") && (targets.single != null || targets.upper != null)) && (
+                      <ReferenceArea
+                        y1={targets.single != null ? Number(targets.single) : Number(targets.upper)}
+                        y2={yDomain[1]}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
+                    {(targets && (targets.action === "decrease" || targets.action === "minimize") && (targets.single != null || targets.lower != null)) && (
+                      <ReferenceArea
+                        y1={0}
+                        y2={targets.single != null ? Number(targets.single) : Number(targets.lower)}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
+                    {(targets && targets.action === "maintain" && targets.lower != null && targets.upper != null) && (
+                      <ReferenceArea
+                        y1={Number(targets.lower)}
+                        y2={Number(targets.upper)}
+                        fill={GOOD_COLOR}
+                        opacity={0.06}
+                        isFront={false}
+                      />
+                    )}
+
+                    {showSingleTarget && <ReferenceLine y={Number(targets.single)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Target: ${Number(targets.single)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+                    {showLower && <ReferenceLine y={Number(targets.lower)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Lower: ${Number(targets.lower)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+                    {showUpper && <ReferenceLine y={Number(targets.upper)} stroke={TARGET_COLOR} strokeDasharray="4 4" label={{ value: `Upper: ${Number(targets.upper)}`, position: "insideTopLeft", fill: TARGET_COLOR }} />}
+
+                    {/* present value */}
+                    {showPresentLine && presentNum != null && (
+                      <ReferenceLine y={Number(presentNum)} stroke="#111827" strokeDasharray="4 4" label={{ value: `Present: ${presentNum}`, position: "insideBottomRight", fill: "#111827" }} />
+                    )}
+
+                    {yHeaders.map((yh, idx) => <Bar key={`bar-${yh}-${idx}`} dataKey={yh} barSize={40 / Math.max(1, yHeaders.length)} fill={COLORS[idx % COLORS.length]} />)}
+                  </BarChart>
+                )
               )}
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 

@@ -542,7 +542,7 @@ import KpiTile from "../components/KpiTile";
 
 /* small loading box */
 function LoadingBox({ text = "Loading..." }) {
-  return <div className="p-4 bg-white rounded shadow-sm text-sm text-slate-500">{text}</div>;
+  return <div className="p-4 bg-white dark:bg-gray-800 rounded shadow-sm text-sm text-slate-500 dark:text-gray-400">{text}</div>;
 }
 
 /* parse date lenient */
@@ -704,7 +704,8 @@ function colorForPercent(pct) {
   if (pct == null || Number.isNaN(pct)) return "gray";
   if (pct < 30) return "red";
   if (pct < 60) return "yellow";
-  return "green";
+  if (pct < 90) return "green";
+  return "blue"; // >= 90%
 }
 
 /* Small helper to normalize to local midnight string key */
@@ -738,7 +739,20 @@ export default function PresentationOverview() {
       try {
         const res = await api.get(`/kpis/plant/${encodeURIComponent(plantId)}`);
         const list = Array.isArray(res.data) ? res.data : [];
-        setKpis(list);
+
+        // Load full KPI details (including target revisions) for each KPI
+        const fullKpiPromises = list.map(async (kpi) => {
+          try {
+            const fullRes = await api.get(`/kpis/${encodeURIComponent(kpi.id)}`);
+            return fullRes.data || kpi; // fallback to basic data if full load fails
+          } catch (err) {
+            console.warn(`Failed to load full details for KPI ${kpi.id}:`, err);
+            return kpi; // fallback to basic data
+          }
+        });
+
+        const fullKpis = await Promise.all(fullKpiPromises);
+        setKpis(fullKpis);
 
         // optional: plant name
         try {
@@ -952,22 +966,10 @@ export default function PresentationOverview() {
             else if (fallbackTargetObj.kind === "range" && fallbackTargetObj.lower != null && fallbackTargetObj.upper != null) avgTarget = (fallbackTargetObj.lower + fallbackTargetObj.upper) / 2;
           }
 
-          // --- Updated percent calculation: for decrease/minimize use target/avgValue, else avgValue/target ---
+          // --- Updated percent calculation: use days achieved percentage ---
           let percentAchieved = 0;
-          const actionForPercent = (kpi.action === "sustain" ? "maintain" : (kpi.action || "maintain"));
-          if (avgTarget != null && Number.isFinite(Number(avgTarget)) && avgValue != null && Number.isFinite(Number(avgValue))) {
-            const aT = Number(avgTarget);
-            const aV = Number(avgValue);
-            if (aV === 0) {
-              // avoid divide-by-zero; set percent to 0 if avgValue zero and action expects avg/target,
-              // or to a large number if target > 0 and we compute target/avgValue (but better to set 0)
-              percentAchieved = 0;
-            } else if (actionForPercent === "decrease" || actionForPercent === "minimize") {
-              percentAchieved = (aT / aV) * 100;
-            } else {
-              // increase, maximize, maintain and others
-              percentAchieved = (aV / aT) * 100;
-            }
+          if (daysFilled > 0) {
+            percentAchieved = (daysAchieved / daysFilled) * 100;
           } else {
             percentAchieved = 0;
           }
@@ -1021,40 +1023,41 @@ export default function PresentationOverview() {
   }, [kpis, fromDate, toDate]);
 
   const counts = useMemo(() => {
-    const c = { total: tileData.length, red: 0, yellow: 0, green: 0, gray: 0 };
+    const c = { total: tileData.length, red: 0, yellow: 0, green: 0, blue: 0, gray: 0 };
     tileData.forEach(t => {
       if (!t) return;
       if (t.color === "red") c.red++;
       else if (t.color === "yellow") c.yellow++;
       else if (t.color === "green") c.green++;
+      else if (t.color === "blue") c.blue++;
       else c.gray++;
     });
     return c;
   }, [tileData]);
 
-  if (loading) return <div className="p-6 max-w-7xl mx-auto"><LoadingBox /></div>;
+  if (loading) return <div className="p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen"><LoadingBox /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button onClick={() => navigate(-1)} className="text-sm text-blue-600 mr-3">← Back</button>
-          <h1 className="text-2xl font-bold inline-block">DMT Performance — {plantName || "Plant"}</h1>
-          <div className="text-sm text-slate-500 mt-1">Overview for selected period</div>
+          <button onClick={() => navigate(-1)} className="text-sm text-blue-600 dark:text-blue-400 mr-3 hover:underline">← Back</button>
+          <h1 className="text-2xl font-bold inline-block text-slate-800 dark:text-white">DMT Performance — {plantName || "Plant"}</h1>
+          <div className="text-sm text-slate-500 dark:text-gray-400 mt-1">Overview for selected period</div>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="text-sm text-slate-500">From</div>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="p-2 border rounded" />
-          <div className="text-sm text-slate-500">To</div>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="p-2 border rounded" />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white" />
+          <div className="text-sm text-slate-500 dark:text-gray-400">To</div>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white" />
           <button onClick={() => navigate(`/plant/${encodeURIComponent(plantId)}/presentation`)} className="px-3 py-2 bg-indigo-600 text-white rounded">Open Presentation Deck</button>
         </div>
       </div>
 
       <div className="mb-4">
-        <div className="text-sm text-slate-600">
-          Tiles: {counts.total} • <span className="text-red-600">Red {counts.red}</span> • <span className="text-amber-600">Yellow {counts.yellow}</span> • <span className="text-green-600">Green {counts.green}</span>
+        <div className="text-sm text-slate-600 dark:text-gray-400">
+          Tiles: {counts.total} • <span className="text-red-600">Red {counts.red}</span> • <span className="text-yellow-600">Yellow {counts.yellow}</span> • <span className="text-green-600">Green {counts.green}</span> • <span className="text-blue-600 font-bold">Blue {counts.blue}</span>
         </div>
       </div>
 

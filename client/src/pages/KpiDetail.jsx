@@ -199,7 +199,7 @@ export default function KpiDetail() {
     if (!Number.isInteger(cnt) || cnt < 0) return alert("count must be a non-negative integer");
     setAttrSaving(true);
     try {
-      const res = await api.post(`/kpis/${encodeURIComponent(kpiId)}/attributes`, { name, count: cnt });
+      const res = await api.post(`/kpis/${encodeURIComponent(kpiId)}/attributes`, { name, count: cnt !== 0 ? cnt : undefined });
       setAttributes(prev => [...prev, res.data]);
       setNewAttrName("");
       setNewAttrCount(0);

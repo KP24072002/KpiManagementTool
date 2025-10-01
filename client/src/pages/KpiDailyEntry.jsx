@@ -540,6 +540,19 @@ function todayIso() {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+function todayDisplayFormat() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${day}-${m}-${y}`;
+}
+function nowDateTimeString() {
+  const d = new Date();
+  const date = todayDisplayFormat();
+  const time = nowTimeString();
+  return `${date} ${time}`;
+}
 function LoadingBox({ text = "Loading..." }) {
   return <div className="p-3 bg-white rounded shadow-sm text-sm text-slate-500">{text}</div>;
 }
@@ -649,8 +662,8 @@ export default function KpiDailyEntry() {
       saving: false,
       attributes: Array.isArray(kpi?.attributes) ? [...kpi.attributes] : [],
       inputs: {
-        timestamp: nowTimeString(),
-        date: todayIso(),
+        timestamp: nowDateTimeString(),
+        date: todayDisplayFormat(),
         kpiValue: "",
         // single target (for non-maintain)
         targetValue: defaultSingle,
@@ -820,8 +833,8 @@ export default function KpiDailyEntry() {
     const row = Array.from({ length: len }).map(() => "");
     const idx = detectIndexes(headers);
 
-    if (idx.timestamp !== -1) row[idx.timestamp] = inputs.timestamp || nowTimeString();
-    if (idx.date !== -1) row[idx.date] = inputs.date || todayIso();
+    if (idx.timestamp !== -1) row[idx.timestamp] = inputs.timestamp || nowDateTimeString();
+    if (idx.date !== -1) row[idx.date] = inputs.date || todayDisplayFormat();
     if (idx.value !== -1) row[idx.value] = inputs.kpiValue !== undefined && inputs.kpiValue !== null ? String(inputs.kpiValue) : "";
 
     // target columns
@@ -871,7 +884,7 @@ export default function KpiDailyEntry() {
   }
 
   /* --- save single KPI --- */
-  async function saveKpi(kpi) {
+  async function saveKpi(kpi, skipAlert = false) {
     const kpiId = kpi.id;
     const entry = stateMap[kpiId];
     if (!entry) return;
@@ -886,6 +899,19 @@ export default function KpiDailyEntry() {
       const headers = Array.isArray(preview.headers) && preview.headers.length ? preview.headers.slice() : headersForAction(normalizeAction(kpi.action));
       const rows = Array.isArray(preview.rows) ? preview.rows.map(r => Array.isArray(r) ? [...r] : [...r]) : [];
 
+      // Prevent duplicate date entries
+      const idxs = detectIndexes(headers);
+      const dateIdx = idxs.date;
+      if (dateIdx !== -1) {
+        const d = inputs.date || todayIso();
+        const duplicate = rows.some(r => (r && r[dateIdx]) === d);
+        if (duplicate) {
+          if (!skipAlert) alert(`An entry for ${d} already exists for "${kpi.name || kpiId}".`);
+          updateKpiState(kpiId, { saving: false });
+          return;
+        }
+      }
+
       const newRow = buildRow(headers, inputs);
 
       // normalize length
@@ -898,10 +924,13 @@ export default function KpiDailyEntry() {
       rows.push(newRow);
       await api.put(`/kpis/${encodeURIComponent(kpiId)}/data`, { headers, rows });
 
+      // Add any custom root causes as attributes to the database
+      await addCustomAttributesToDatabase(kpiId, inputs);
+
       // reset inputs (keep target values unless user cleared them)
       const preserved = { ...inputs };
       const resetFields = {
-        timestamp: nowTimeString(),
+        timestamp: nowDateTimeString(),
         kpiValue: "",
         // clear root causes/time pairs
         time1: "", rootCause1: "", rootCause1Custom: "",
@@ -916,13 +945,18 @@ export default function KpiDailyEntry() {
         inputs: { ...preserved, ...resetFields }
       });
 
-      // attempt to refresh attributes from server
+      // attempt to refresh attributes from server to include newly added custom attributes
       try {
         const updatedRes = await api.get(`/kpis/${encodeURIComponent(kpiId)}`);
-        if (updatedRes.data && Array.isArray(updatedRes.data.attributes)) updateKpiState(kpiId, { attributes: [...updatedRes.data.attributes] });
+        if (updatedRes.data && Array.isArray(updatedRes.data.attributes)) {
+          updateKpiState(kpiId, { attributes: [...updatedRes.data.attributes] });
+        }
       } catch (e) { /* ignore */ }
 
-      alert(`Saved entry for "${kpi.name || kpiId}"`);
+      // Only show alert if not called from Save All
+      if (!skipAlert) {
+        alert(`Saved entry for "${kpi.name || kpiId}"`);
+      }
     } catch (err) {
       console.error("Failed to save KPI row", err);
       alert(err?.response?.data?.error || err?.message || "Save failed");
@@ -933,6 +967,10 @@ export default function KpiDailyEntry() {
   /* --- save all non-empty entries sequentially --- */
   async function handleSaveAll() {
     setSavingAll(true);
+    let savedCount = 0;
+    let errorCount = 0;
+    const duplicateMessages = [];
+    
     try {
       for (const kpi of kpis) {
         const st = stateMap[kpi.id];
@@ -942,12 +980,54 @@ export default function KpiDailyEntry() {
         const hasValue = inputs.kpiValue !== "" && inputs.kpiValue != null;
         const hasTargetSingle = inputs.targetValue !== "" && inputs.targetValue != null;
         const hasTargetMaintain = (inputs.targetLower !== "" && inputs.targetLower != null) || (inputs.targetUpper !== "" && inputs.targetUpper != null);
+        
         if (!hasValue && !hasTargetSingle && !hasTargetMaintain && !anyRoot) continue;
-        await saveKpi(kpi);
+        
+        // Duplicate date guard per KPI
+        try {
+          const preview = await fetchPreview(kpi.id);
+          const headers = Array.isArray(preview.headers) ? preview.headers : [];
+          const rows = Array.isArray(preview.rows) ? preview.rows : [];
+          const idxs = detectIndexes(headers);
+          const dateIdx = idxs.date;
+          if (dateIdx !== -1) {
+            const d = inputs.date || todayIso();
+            const duplicate = rows.some(r => (r && r[dateIdx]) === d);
+            if (duplicate) {
+              duplicateMessages.push(`${kpi.name || kpi.id}: ${d}`);
+              errorCount++;
+              continue; // skip saving this KPI
+            }
+          }
+        } catch (e) {
+          // if preview fails, proceed and let saveKpi handle errors
+        }
+        
+        try {
+          await saveKpi(kpi, true); // skipAlert = true
+          savedCount++;
+        } catch (err) {
+          console.error(`Failed to save KPI ${kpi.name}:`, err);
+          errorCount++;
+        }
       }
+      
       // refresh previews after batch
       for (const kpi of kpis) {
         await fetchPreview(kpi.id);
+      }
+      
+      // Single confirmation message
+      if (savedCount > 0 && errorCount === 0) {
+        alert(`Successfully saved ${savedCount} KPI entries!`);
+      } else if (savedCount > 0 && errorCount > 0) {
+        const dupText = duplicateMessages.length ? `\nDuplicate dates:\n- ${duplicateMessages.join("\n- ")}` : "";
+        alert(`Saved ${savedCount} KPI entries successfully. ${errorCount} entries failed to save.${dupText}`);
+      } else if (errorCount > 0) {
+        const dupText = duplicateMessages.length ? `\nDuplicate dates:\n- ${duplicateMessages.join("\n- ")}` : "";
+        alert(`Failed to save ${errorCount} KPI entries. Please check the data and try again.${dupText}`);
+      } else {
+        alert("No entries to save. Please fill in at least one KPI.");
       }
     } finally {
       setSavingAll(false);
@@ -984,11 +1064,65 @@ export default function KpiDailyEntry() {
     );
   }
 
-  /* --- handle manual edits to targets (set editable flags) --- */
+  /* --- auto-add custom attributes to database --- */
+  async function addCustomAttributesToDatabase(kpiId, inputs) {
+    const customAttributes = [];
+    
+    // Collect all custom root causes
+    for (let i = 1; i <= 5; i++) {
+      const rootCause = inputs[`rootCause${i}`];
+      const customText = inputs[`rootCause${i}Custom`];
+      
+      if (rootCause === "__custom__" && customText && customText.trim()) {
+        customAttributes.push(customText.trim());
+      }
+    }
+    
+    // Add each unique custom attribute to the database
+    let anyAdded = false;
+    for (const customAttr of customAttributes) {
+      try {
+        const res = await api.post(`/kpis/${encodeURIComponent(kpiId)}/attributes`, {
+          name: customAttr
+          // Don't send count so backend will scan data and update count
+        });
+        console.log(`Added custom attribute: ${customAttr}`);
+        // Update local state immediately if we got a response
+        if (res && res.data) {
+          const currentEntry = stateMap[kpiId] || {};
+          const currentAttrs = Array.isArray(currentEntry.attributes) ? currentEntry.attributes : [];
+          // Only add if not already present
+          if (!currentAttrs.some(x => x.id === res.data.id)) {
+            updateKpiState(kpiId, { 
+              attributes: [...currentAttrs, res.data] 
+            });
+          }
+          anyAdded = true;
+        }
+      } catch (err) {
+        // Ignore if attribute already exists or other errors
+        console.warn(`Failed to add custom attribute "${customAttr}":`, err?.response?.data?.error || err?.message);
+      }
+    }
+    
+    // If any attributes were added but we couldn't update state directly, refresh from server
+    if (customAttributes.length > 0 && !anyAdded) {
+      try {
+        const kpiRes = await api.get(`/kpis/${encodeURIComponent(kpiId)}`);
+        if (kpiRes.data && Array.isArray(kpiRes.data.attributes)) {
+          updateKpiState(kpiId, { attributes: [...kpiRes.data.attributes] });
+        }
+      } catch (err) {
+        console.warn('Failed to refresh attributes:', err);
+      }
+    }
+  }
+  // Target values are now fixed and read-only in daily entry
+  // They can only be modified in KPI creation/edit forms
   function handleTargetManualEdit(kpiId, field, value) {
-    if (field === "single") updateKpiInputs(kpiId, { targetValue: value, targetValueEditable: true });
-    else if (field === "lower") updateKpiInputs(kpiId, { targetLower: value, targetLowerEditable: true });
-    else if (field === "upper") updateKpiInputs(kpiId, { targetUpper: value, targetUpperEditable: true });
+    // This function is no longer used for editing targets in daily entry
+    // Keeping for backward compatibility but targets remain read-only
+    console.warn('Target values are read-only in daily entry. Use KPI edit form to modify targets.');
   }
 
   /* --- auto-fill effect for targets (synchronise to KPI metadata if user hasn't edited) --- */
@@ -1067,37 +1201,18 @@ export default function KpiDailyEntry() {
 
                 <div className="flex flex-col gap-2">
                   <button onClick={() => fetchPreview(kpi.id)} className="px-3 py-1 bg-slate-100 rounded text-sm">Refresh Preview</button>
-                  <button
-                    onClick={() => {
-                      updateKpiState(kpi.id, {
-                        inputs: {
-                          ...entry.inputs,
-                          timestamp: nowTimeString(),
-                          kpiValue: "",
-                          time1: "", rootCause1: "", rootCause1Custom: "",
-                          time2: "", rootCause2: "", rootCause2Custom: "",
-                          time3: "", rootCause3: "", rootCause3Custom: "",
-                          time4: "", rootCause4: "", rootCause4Custom: "",
-                          time5: "", rootCause5: "", rootCause5Custom: ""
-                        }
-                      });
-                    }}
-                    className="px-3 py-1 bg-slate-100 rounded text-sm"
-                  >
-                    Reset
-                  </button>
                 </div>
               </div>
 
               <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
                 <div className="lg:col-span-3">
-                  <label className="block text-xs text-slate-500">Timestamp</label>
-                  <input className="p-2 border rounded w-full" value={inputs.timestamp} onChange={(e) => updateKpiInputs(kpi.id, { timestamp: e.target.value })} />
+                  <label className="block text-xs text-slate-500">Timestamp (Fixed)</label>
+                  <input className="p-2 border rounded w-full bg-gray-100" value={inputs.timestamp} readOnly disabled />
                 </div>
 
                 <div className="lg:col-span-2">
-                  <label className="block text-xs text-slate-500">Date</label>
-                  <input type="date" className="p-2 border rounded w-full" value={inputs.date} onChange={(e) => updateKpiInputs(kpi.id, { date: e.target.value })} />
+                  <label className="block text-xs text-slate-500">Date (Fixed)</label>
+                  <input className="p-2 border rounded w-full bg-gray-100" value={inputs.date} readOnly disabled />
                 </div>
 
                 <div className="lg:col-span-2">
@@ -1108,18 +1223,18 @@ export default function KpiDailyEntry() {
                 {isMaintain ? (
                   <>
                     <div className="lg:col-span-2">
-                      <label className="block text-xs text-slate-500">Target Lower</label>
-                      <input type="number" className="p-2 border rounded w-full" value={inputs.targetLower} onChange={(e) => handleTargetManualEdit(kpi.id, "lower", e.target.value)} />
+                      <label className="block text-xs text-slate-500">Target Lower (Fixed)</label>
+                      <input type="number" className="p-2 border rounded w-full bg-gray-100" value={inputs.targetLower} readOnly disabled />
                     </div>
                     <div className="lg:col-span-2">
-                      <label className="block text-xs text-slate-500">Target Upper</label>
-                      <input type="number" className="p-2 border rounded w-full" value={inputs.targetUpper} onChange={(e) => handleTargetManualEdit(kpi.id, "upper", e.target.value)} />
+                      <label className="block text-xs text-slate-500">Target Upper (Fixed)</label>
+                      <input type="number" className="p-2 border rounded w-full bg-gray-100" value={inputs.targetUpper} readOnly disabled />
                     </div>
                   </>
                 ) : (
                   <div className="lg:col-span-3">
-                    <label className="block text-xs text-slate-500">Target Value</label>
-                    <input type="number" className="p-2 border rounded w-full" value={inputs.targetValue} onChange={(e) => handleTargetManualEdit(kpi.id, "single", e.target.value)} />
+                    <label className="block text-xs text-slate-500">Target Value (Fixed)</label>
+                    <input type="number" className="p-2 border rounded w-full bg-gray-100" value={inputs.targetValue} readOnly disabled />
                   </div>
                 )}
 
@@ -1135,7 +1250,7 @@ export default function KpiDailyEntry() {
                         )}
                         <div className="mt-2">
                           <div className="text-xs text-slate-500">Time</div>
-                          <input className="p-2 border rounded w-full text-sm" value={inputs[`time${i}`]} onChange={(e) => updateKpiInputs(kpi.id, { [`time${i}`]: e.target.value })} placeholder={nowTimeString()} />
+                          <input className="p-2 border rounded w-full text-sm" value={inputs[`time${i}`]} onChange={(e) => updateKpiInputs(kpi.id, { [`time${i}`]: e.target.value })} placeholder="MINUTES" />
                         </div>
                       </div>
                     ))}
@@ -1165,7 +1280,18 @@ export default function KpiDailyEntry() {
                       <tbody>
                         {entry.preview.rows.slice(-5).map((r, ri) => (
                           <tr key={ri} className={ri % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                            {(r || []).map((c, ci) => <td key={ci} className="px-2 py-1 align-top">{c}</td>)}
+                            {(r || []).map((c, ci) => {
+                              // Convert attribute ID to name for root cause columns
+                              const headerName = (entry.preview.headers || headers)[ci] || '';
+                              const isRootCause = /root\s*cause/i.test(headerName.toString());
+                              if (isRootCause && c && entry.attributes) {
+                                const attr = entry.attributes.find(a => String(a.id) === String(c));
+                                if (attr) {
+                                  return <td key={ci} className="px-2 py-1 align-top">{attr.name}</td>;
+                                }
+                              }
+                              return <td key={ci} className="px-2 py-1 align-top">{c}</td>;
+                            })}
                           </tr>
                         ))}
                       </tbody>

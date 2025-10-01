@@ -110,18 +110,18 @@ export default function TargetRevisions({ kpiId }) {
               </tr>
             ) : revisions.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-4 text-slate-500">No revisions yet.</td>
+                <td colSpan={4} className="p-4 text-slate-500 dark:text-gray-400">No revisions yet.</td>
               </tr>
             ) : (
               revisions.map((r, idx) => (
-                <tr key={r.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                  <td className="px-3 py-2">{idx + 1}</td>
-                  <td className="px-3 py-2">{r.targetValue}</td>
-                  <td className="px-3 py-2">{r.revisionDate || "—"}</td>
+                <tr key={r.id} className={idx % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-slate-50 dark:bg-gray-700"}>
+                  <td className="px-3 py-2 text-slate-800 dark:text-white">{idx + 1}</td>
+                  <td className="px-3 py-2 text-slate-800 dark:text-white">{r.targetValue}</td>
+                  <td className="px-3 py-2 text-slate-800 dark:text-white">{r.revisionDate || "—"}</td>
                   <td className="px-3 py-2">
                     <button
                       onClick={() => handleDelete(r.id)}
-                      className="px-2 py-1 bg-red-50 text-red-600 rounded text-sm"
+                      className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded text-sm hover:bg-red-100 dark:hover:bg-red-800"
                     >
                       Delete
                     </button>

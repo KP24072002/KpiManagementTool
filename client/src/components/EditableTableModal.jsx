@@ -202,14 +202,14 @@ export default function EditableTableModal({
     <div className="fixed inset-0 z-40 flex items-center justify-center">
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
 
-      <div className="relative z-50 bg-white rounded shadow-lg w-[92%] max-w-7xl h-[80vh] flex flex-col overflow-hidden">
+      <div className="relative z-50 bg-white dark:bg-gray-800 rounded shadow-lg w-[92%] max-w-7xl h-[80vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Edit Rows</h3>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Edit Rows</h3>
           <div className="flex gap-2">
-            <button onClick={() => addColumn()} className="px-3 py-1 bg-slate-100 rounded text-sm">+ Column</button>
-            <button onClick={addRow} className="px-3 py-1 bg-slate-100 rounded text-sm">+ Row</button>
-            <button onClick={addRootCauseColumn} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded text-sm">+ Add Root Cause</button>
+            <button onClick={() => addColumn()} className="px-3 py-1 bg-slate-100 dark:bg-gray-700 rounded text-sm text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-gray-600">+ Column</button>
+            <button onClick={addRow} className="px-3 py-1 bg-slate-100 dark:bg-gray-700 rounded text-sm text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-gray-600">+ Row</button>
+            <button onClick={addRootCauseColumn} className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded text-sm hover:bg-emerald-200 dark:hover:bg-emerald-800">+ Add Root Cause</button>
           </div>
         </div>
 
@@ -219,36 +219,36 @@ export default function EditableTableModal({
             <table className="min-w-max w-full table-auto text-sm">
               <thead>
                 <tr>
-                  <th className="sticky top-0 bg-white z-20 px-2 py-2 align-top" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>#</th>
+                  <th className="sticky top-0 bg-white dark:bg-gray-800 z-20 px-2 py-2 align-top text-slate-700 dark:text-gray-300" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>#</th>
 
                   {headers.map((h, ci) => (
-                    <th key={ci} className="sticky top-0 bg-white z-20 px-2 py-2 align-top" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                    <th key={ci} className="sticky top-0 bg-white dark:bg-gray-800 z-20 px-2 py-2 align-top text-slate-700 dark:text-gray-300" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                       <div className="flex items-center gap-2">
                         <input
                           title={h || `Col ${ci + 1}`}
                           value={h || ""}
                           onChange={(e) => handleHeaderChange(ci, e.target.value)}
-                          className="p-1 border rounded text-sm min-w-[160px] whitespace-nowrap"
+                          className="p-1 border border-gray-300 dark:border-gray-600 rounded text-sm min-w-[160px] whitespace-nowrap dark:bg-gray-700 dark:text-white"
                           placeholder={`Col ${ci + 1}`}
                         />
-                        <button onClick={() => deleteColumn(ci)} className="text-sm text-red-500 px-1" title="Delete column">✕</button>
+                        <button onClick={() => deleteColumn(ci)} className="text-sm text-red-500 dark:text-red-400 px-1 hover:text-red-700 dark:hover:text-red-300" title="Delete column">✕</button>
                       </div>
                     </th>
                   ))}
 
-                  <th className="sticky top-0 bg-white z-20 px-2 py-2 align-top" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>Actions</th>
+                  <th className="sticky top-0 bg-white dark:bg-gray-800 z-20 px-2 py-2 align-top text-slate-700 dark:text-gray-300" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={Math.max(1, headers.length + 2)} className="px-3 py-3 text-sm text-slate-500">No rows yet.</td>
+                    <td colSpan={Math.max(1, headers.length + 2)} className="px-3 py-3 text-sm text-slate-500 dark:text-gray-400">No rows yet.</td>
                   </tr>
                 ) : (
                   rows.map((r, ri) => (
-                    <tr key={ri} className={ri % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                      <td className="px-2 py-2 align-top text-xs text-slate-500">{ri + 1}</td>
+                    <tr key={ri} className={ri % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-slate-50 dark:bg-gray-700"}>
+                      <td className="px-2 py-2 align-top text-xs text-slate-500 dark:text-gray-400">{ri + 1}</td>
 
                       {headers.map((_, ci) => {
                         const cellVal = rows[ri][ci] ?? "";
@@ -268,15 +268,15 @@ export default function EditableTableModal({
                                   })()
                                 }
                                 onChange={(e) => updateCell(ri, ci, e.target.value)}
-                                className="w-full p-1 border rounded text-sm"
+                                className="w-full p-1 border border-gray-300 dark:border-gray-600 rounded text-sm dark:bg-gray-700 dark:text-white"
                               >
-                                <option value="">(select)</option>
+                                <option value="" className="dark:bg-gray-700 dark:text-white">(select)</option>
                                 {attributes.map((attr) => {
                                   // show count clearly: use stored attr.count OR dynamic count seen in current rows (whichever is larger)
                                   const dyn = dynamicAttrCounts[attr.id] || 0;
                                   const stored = (attr.count === undefined || attr.count === null) ? 0 : Number(attr.count);
                                   const showCount = Math.max(stored, dyn);
-                                  return <option key={attr.id} value={attr.id}>{attr.name}{showCount ? ` (${showCount})` : ""}</option>;
+                                  return <option key={attr.id} value={attr.id} className="dark:bg-gray-700 dark:text-white">{attr.name}{showCount ? ` (${showCount})` : ""}</option>;
                                 })}
                               </select>
                             </td>
@@ -284,14 +284,14 @@ export default function EditableTableModal({
                         } else {
                           return (
                             <td key={ci} className="px-2 py-2 align-top">
-                              <input value={cellVal} onChange={(e) => updateCell(ri, ci, e.target.value)} className="w-full p-1 border rounded text-sm min-w-[160px]" />
+                              <input value={cellVal} onChange={(e) => updateCell(ri, ci, e.target.value)} className="w-full p-1 border border-gray-300 dark:border-gray-600 rounded text-sm min-w-[160px] dark:bg-gray-700 dark:text-white" />
                             </td>
                           );
                         }
                       })}
 
                       <td className="px-2 py-2 align-top">
-                        <button onClick={() => deleteRow(ri)} className="text-sm text-red-600">Delete</button>
+                        <button onClick={() => deleteRow(ri)} className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">Delete</button>
                       </td>
                     </tr>
                   ))
@@ -302,11 +302,14 @@ export default function EditableTableModal({
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-100 rounded">Cancel</button>
-          <button onClick={handleSaveClick} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 bg-slate-100 dark:bg-gray-700 rounded text-slate-800 dark:text-white hover:bg-slate-200 dark:hover:bg-gray-600">Cancel</button>
+          <button onClick={handleSaveClick} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
   );
 }
+
+
+
